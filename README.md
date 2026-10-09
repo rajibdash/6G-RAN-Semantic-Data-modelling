@@ -49,8 +49,141 @@
        +---------------------------------------------------------+
 ```
 ## Semantic-aware MAC Scheduler design details
-__*WIP*__
+### Functional Architecture & Design
 
+The details the internal architectural components and data flows of a **Semantic-Aware Medium Access Control (MAC) Scheduler** residing within the gNodeB Distributed Unit (gNB-DU). 
+
+#### 1. Functional Design Block Diagram
+
+The block diagram below details the architecture, component boundaries, and internal interfaces of the Semantic-Aware MAC Scheduler.
+
+```
+       +-------------------------------------------------------------+
+       |                  gNB-DU Upper Layers (RLC)                  |
+       +-------------------------------------------------------------+
+                                      |
+                                      | RLC SDUs & Packet Metadata
+                                      v
++--------------------------------------------------------------------+
+| gNB-DU MAC LAYER                                                   |
+|                                                                    |
+|  +--------------------------------------------------------------+  |
+|  | [1] SEMANTIC EXTRACTION & PARSING ENGINE                     |  |
+|  |     - Inspects SDAP / GTP-U / RLC Header Extensions          |  |
+|  |     - Extracts Raw Contextual Features (Data Urgency, Type)  |  |
+|  +--------------------------------------------------------------+  |
+|                                 |                                  |
+|                                 | Parsed Semantic Features         |
+|                                 v                                  |
+|  +--------------------------------------------------------------+  |
+|  | [2] SEMANTIC INFORMATION VALUATION MODULE (SIVM)             |  |
+|  |     - Tracks Age of Information (AoI) State Per Flow         |  |
+|  |     - Computes Value of Information (VoI) Utility Metrics    |  |
+|  +--------------------------------------------------------------+  |
+|                                 |                                  |
+|                                 | Unified Semantic Weight (ω)      |
+|                                 v                                  |
+|  +--------------------------------------------------------------+  |
+|  | [3] SEMANTIC-AWARE RESOURCE ALLOCATION ENGINE                |  |
+|  |     - Dynamic Metric Assembly Loop:                          |  |
+|  |       M_i,k = [ R_i,k / Avg_R_i ] x ω_i                      |  |
+|  |     - Maps Semantic Value against Radio PRB Constraints      |  |
+|  +--------------------------------------------------------------+  |
+|               |                                  ^                 |
+|   PRB Blocks  |                                  | Channel/HARQ    |
+|   & MCS Data  v                                  | Feedback Loop   |
+|  +--------------------------------------------------------------+  |
+|  | [4] MAC MODULE INTERFACES & FEEDBACK HANDLER                 |  |
+|  |     - Constructs Downlink Control Information (DCI)          |  |
+|  |     - Executes Exponential Metric Boosts on Critical NACKs   |  |
+|  +--------------------------------------------------------------+  |
+|                               |                                    |
++-------------------------------|------------------------------------+
+                                |
+                                | Transport Channels (TB / DCI)
+                                v
+       +-------------------------------------------------------------+
+       |                      gNB-DU PHY Layer                       |
+       +-------------------------------------------------------------+
+```
+
+#### 2. Component-Level Specifications/Descriptions
+
+##### [1] Semantic Extraction & Parsing Engine
+* **Purpose:** Inspects incoming data boundaries at the sub-millisecond level to determine the contextual priority of a packet.
+* **Key Mechanisms:**
+  * **Header Inspection:** Decodes deep encapsulation or explicit metadata marks passed from the Service Data Adaptation Protocol (SDAP) or user-plane transport network layers.
+  * **Feature Mapping:** Classifies raw bytes into distinct structural states (e.g., control loop state transitions, high-impact changes in automated driving safety margins, or invariant background information).
+
+##### [2] Semantic Information Valuation Module (SIVM)
+* **Purpose:** Computes the true objective worth of a data unit based on environmental state dynamics and timing.
+* **Key Mechanisms:**
+  * **Age of Information (AoI) Registry:** Maintains a highly granular per-flow tracking database of time elapsed since the generation of the last successfully received update.
+  * **Utility Transform Functions:** Converts linear delay or age properties into highly customized non-linear application values ($U_i$). For instance, an exponential decay function is used for control parameters where old updates yield zero value.
+
+##### [3] Semantic-Aware Resource Allocation Engine
+* **Purpose:** Solves the core resource distribution matrix across the space, time, and frequency domains of the NR air interface.
+* **Key Mechanisms:**
+  * **Metric Assembly:** Pairs the Channel Quality Indicator (CQI) inputs with the contextual scaling factors calculated by the SIVM. 
+  * **PRB Multi-plexing Optimization:** Iterates through available Physical Resource Blocks (PRBs) using a bounded greedy loop, maximizing the total transmitted Value of Information (VoI) rather than traditional raw bit volumes.
+
+##### [4] MAC Module Interfaces & Feedback Handler
+* **Purpose:** Directs hardware mapping loops and enforces closed-loop target state corrections.
+* **Key Mechanisms:**
+  * **HARQ Interaction:** Intercepts Hybrid Automatic Repeat Request (HARQ) ACK/NACK signaling from the Physical Layer.
+  * **Priority Adjustment:** If a semantically critical block triggers a NACK, this component overrides baseline metrics, boosting the packet's allocation factor in the immediately following Transmission Time Interval (TTI).
+
+## Semantic-Aware MAC Scheduler with HARQ, DTX, and Carrier Aggregation Constraints 
+
+### System Architecture & Block Diagram
+The Semantic-Aware MAC Scheduler inside the gNB Distributed Unit (gNB-DU) shifts the resource block allocation paradigm from classic raw-throughput optimization to the optimization of **Quality of Information (QoI)** and **Value of Information (VoI)**. This architectural extension explicitly models **16-process HARQ management**, **DTX (Discontinuous Transmission) recovery loops**, and **Carrier Aggregation (CA)** across multiple Component Carriers (CCs).
+
+```
++-----------------------------------------------------------------------+
+|                       RLC LAYER (Logical Channels)                    |
+|       [UE 1 Buffers]          [UE 2 Buffers]          [UE n Buffers]  |
++-----------------------------------------------------------------------+
+                               |
+                               v (SDUs + Metadata)
++-----------------------------------------------------------------------+
+|                          gNB-DU MAC LAYER                             |
+|                                                                       |
+|  +-----------------------------------------------------------------+  |
+|  |           1. SEMANTIC EXTRACTION & PARSING ENGINE               |  |
+|  |   - Parse packet context & timestamp payloads                   |  |
+|  |   - Compute Instantaneous Age of Information (AoI)              |  |
+|  +-----------------------------------------------------------------+  |
+|                               |                                       |
+|                               v (AoI, Context Urgency)                |
+|  +-----------------------------------------------------------------+  |
+|  |          2. SEMANTIC INFORMATION VALUATION MODULE (SIVM)        |  |
+|  |   - Evaluate VoI based on state deviation & lifetime thresholds |  |
+|  +-----------------------------------------------------------------+  |
+|                               |                                       |
+|                               v (Dynamic Weights: omega_i)            |
+|  +-----------------------------------------------------------------+  |
+|  |    3. CARRIER AGGREGATION & MULTI-HARQ SCHEDULING ENGINE        |  |
+|  |   - Monitor Component Carriers (CC_1 to CC_m)                   |  |
+|  |   - Handle 16 parallel HARQ Processes per UE per CC             |  |
+|  |   - SPF Optimization Loop under Power & PRB budget limits       |  |
+|  +-----------------------------------------------------------------+  |
+|                               |                                       |
+|                               v (Resource Grants & Modulation Coding) |
+|  +-----------------------------------------------------------------+  |
+|  |                4. HARQ FEEDBACK & DTX HANDLER                   |  |
+|  |   - Process ACK / NACK / DTX feedback per CC                    |  |
+|  |   - DTX Blind Re-transmission & Power Adjustments               |  |
+|  +-----------------------------------------------------------------+  |
++-----------------------------------------------------------------------+
+                               |
+                               v (Transport Blocks / DCI via MAC PDU)
++-----------------------------------------------------------------------+
+|                      PHY LAYER (Component Carriers)                   |
+|         [ CC 1 ]                 [ CC 2 ]                 [ CC m ]    |
++-----------------------------------------------------------------------+
+```
+
+---
 ## References
 
 1. Sagduyu, Y. E., & Erpek, T. (2026). When Semantic Communication Meets Queueing: Cross-Layer Optimization of Latency and Task Fidelity. arXiv:2605.05514. https://arxiv.org/abs/2605.05514
