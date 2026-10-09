@@ -3,7 +3,11 @@
 * RAN Semantic Data in 6G shifts the paradigm of wireless transmission from shannonian bit-level delivery to the delivery of the meaning and intent of data.
 * By transmitting only the essential semantic attributes required to reconstruct meaning at the receiver, 6G Radio Access Networks (RAN) can reduce bandwidth consumption, ultra-low latency, and intelligent edge reasoning
 * ?__Semantic communication is fundamentally a rate-allocation problem__: a limited transmission budget is split between describing task-relevant content and protecting it against the channel. The practical bottleneck is often not compression efficiency alone but model interoperability, because the neural encoder on the device and the neural decoder in the network must behave as a compatible pair. Shared codebooks, semantic equalization, and a classical fallback mode all start to look less like isolated codec tricks and more like the same two-sided AI management problem that 3GPP already faces in areas such as AI-assisted channel-state feedback.
-* ? Placement decides where inference can run. Accelerator contention decides how many semantic sessions the RAN can sustain.
+* ? Placement decides where the inference can run. Accelerator contention decides how many semantic sessions the RAN can sustain. relation between semantic session and UE session, does UE session know about every semantic data and semantic session? how memory footprint will be impacted with AI/ML Ops for semantic data transmission and/or reception, OTA impact as well?
+* A Semantic Aware Radio Access Network (S-RAN) uses AI and ML Ops to compress data into a latent representation (a "semantic data layer").
+* How it works?: For example instead of sending an entire high resolution(HD) image over a crowded cellular/Radio link, a semantic encoder strips away redundant data and extracts only the essential features needed for the receiving end to understand or reconstruct the message.
+* Why it matters?: It dramatically increases spectrum efficiency and reduces latency. The RAN schedules and weights radio resources based on the importance and semantic value of the data rather than treating every bit identically.
+* Benefits?:
 
 ### Background
 * Need to understand how to model and integrate a **Semantic Layer** and a **Knowledge Plane** parallel to the data and control planes for 6G.
