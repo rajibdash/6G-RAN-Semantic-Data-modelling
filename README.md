@@ -45,3 +45,15 @@
 
 ## References
 
+1. Sagduyu, Y. E., & Erpek, T. (2026). When Semantic Communication Meets Queueing: Cross-Layer Optimization of Latency and Task Fidelity. arXiv:2605.05514. https://arxiv.org/abs/2605.05514
+
+2. O-RAN ALLIANCE. dApp Architecture and Interfaces. Research report on real-time AI-based observability and programmability in O-RAN. https://www.o-ran.org/research-reports/dapp-architecture-and-interfaces
+
+3. O-RAN ALLIANCE. dApps for Real-Time RAN Control: Use Cases and Requirements. https://www.o-ran.org/research-reports/dapps-for-real-time-ran-control-use-cases-and-requirements
+
+4. Santhi, N. N., et al. (2026). ARCHES: Adaptive Real-Time Switching of AI Models for the RAN. arXiv:2604.23397. https://arxiv.org/abs/2604.23397
+
+5. NVIDIA Technical Blog. Deploy AI-RAN at Cell Sites with NVIDIA ARC-Compact. https://developer.nvidia.com/blog/deploy-ai-ran-at-cell-sites-with-nvidia-arc-compact/
+
+6. Task-Oriented Communication with Hybrid-Precision Models. arXiv:2607.16766. https://arxiv.org/abs/2607.16766
+
