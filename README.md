@@ -5,9 +5,8 @@
 
 ### Background
 * Need to understand how to model and integrate a **Semantic Layer** and a **Knowledge Plane** parallel to the data and control planes for 6G.
-
-### Why a need of Semantic layer and data for 6G, and how AI could play in that modelling? Also, the lifecycle of Semantic Models in the RAN.
-* Semantic-aware MAC Scheduler: how MAC Scheduler will be semantic aware and what features is needed for that, full design with signaling
+**Why a need of Semantic layer and data for 6G, and how AI could play in that modelling? Also, the lifecycle of Semantic Models in the RAN.**
+* Semantic aware MAC Scheduler: how MAC Scheduler will be semantic aware and what features and controls are needed for that, full design with signaling, benefits in terms user and RAN perspective. 
 
 ### Architecture and stack (High level)
 
