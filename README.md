@@ -84,7 +84,7 @@ The block diagram below details the architecture, component boundaries, and inte
   * It takes the corrupted channel symbols (y) and reconstructs the data.
   * Instead of minimizing bit-error rate (BER), it optimizes semantic similarity (e.g., MS-SSIM for images, BLEU for text, or classification accuracy for edge AI).
 
-**Draft code(PyTorch blueprint with Deep JSCC Semantic PHY layer designed...)**
+**Draft code(PyTorch blueprint with Deep JSCC (Joint Source-Channel Coding) Semantic PHY layer designed...)**
 
 ```python
 
