@@ -77,6 +77,13 @@ The block diagram below details the architecture, component boundaries, and inte
 +---------------------------------------------------------------------------------+
 
 ```
+* **Semantic Encoder (Transmitter)**
+  * Maps raw data (e.g., an image, text tokens, or telemetry vector) directly to complex valued channel symbols (\(x \in \mathbb{C}\)), completely bypassing digital modulation schemes like QAM.
+
+* **Semantic Decoder (Receiver)**
+  * It takes the corrupted channel symbols (y) and reconstructs the data.
+  * Instead of minimizing bit-error rate (BER), it optimizes semantic similarity (e.g., MS-SSIM for images, BLEU for text, or classification accuracy for edge AI).
+
 **Semantic MAC Scheduler view**
 
 ```
