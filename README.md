@@ -58,14 +58,36 @@ The details the internal architectural components and data flows of a **Semantic
 The block diagram below details the architecture, component boundaries, and internal interfaces of the Semantic-Aware MAC Scheduler.
 
 ```
-       +-------------------------------------------------------------+
-       |                  gNB-DU Upper Layers (RLC)                  |
-       +-------------------------------------------------------------+
-                                      |
-                                      | RLC SDUs & Packet Metadata
-                                      v
++---------------------------------------------------------------------------------+
+|                                                                                 |
+|                              [SEMANTIC MAC LAYER]                               |
+|                   - Channel State Information (CSI) Estimation                  |
+|          - Semantic Information Bottleneck / Compression Ratio Control          |
+|     - Adaptive Power and Bandwidth Allocation based on Semantic Importance      |
++---------------------------------------------------------------------------------+
+                                       |
+                                       v
++---------------------------------------------------------------------------------+
+|                                                                                 |
+|                            [SEMANTIC PHY LAYER]                                 |
+|                                                                                 |
+|   [Source Data] ---> [Semantic Encoder] ---> [Power Norm] ---> [AWGN/Rayleigh]  |
+|                             |                                        |          |
+|   [Reconstructed Data] <-- [Semantic Decoder] <----------------------+          |
++---------------------------------------------------------------------------------+
+
+```
+**Semantic MAC Scheduler view**
+
+```
+   +-------------------------------------------------------------+
+   |                  gNB-DU Upper Layers (RLC)                  |
+   +-------------------------------------------------------------+
+                                |
+                                | RLC SDUs & Packet Metadata
+                                v
 +--------------------------------------------------------------------+
-| gNB-DU MAC LAYER                                                   |
+| gNB-DU MAC LAYER(L2)                                               |
 |                                                                    |
 |  +--------------------------------------------------------------+  |
 |  | [1] SEMANTIC EXTRACTION & PARSING ENGINE                     |  |
@@ -102,9 +124,10 @@ The block diagram below details the architecture, component boundaries, and inte
                                 |
                                 | Transport Channels (TB / DCI)
                                 v
-       +-------------------------------------------------------------+
-       |                      gNB-DU PHY Layer                       |
-       +-------------------------------------------------------------+
+   +-------------------------------------------------------------+
+   |                      gNB-DU PHY Layer                       |
+   +-------------------------------------------------------------+
+
 ```
 
 #### 2. Component-Level Specifications/Descriptions
