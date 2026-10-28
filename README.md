@@ -84,6 +84,299 @@ The block diagram below details the architecture, component boundaries, and inte
   * It takes the corrupted channel symbols (y) and reconstructs the data.
   * Instead of minimizing bit-error rate (BER), it optimizes semantic similarity (e.g., MS-SSIM for images, BLEU for text, or classification accuracy for edge AI).
 
+**Draft code(PyTorch blueprint with Deep JSCC Semantic PHY layer designed...)**
+
+```python
+
+import torch
+import torch.nn as nn
+import torch.optim as optim
+
+class SemanticEncoder(nn.Module):
+    """
+    Semantic PHY Transmitter: Extracts structural features from raw data 
+    and directly maps them to a set of continuous channel symbols.
+    """
+    def __init__(self, latent_dim=16):
+        super(SemanticEncoder, self).__init__()
+        # Feature extraction and semantic abstraction
+        self.feature_extractor = nn.Sequential(
+            nn.Conv2d(3, 32, kernel_size=5, stride=2, padding=2), # B, 32, 16, 16
+            nn.ReLU(),
+            nn.Conv2d(32, 64, kernel_size=5, stride=2, padding=2), # B, 64, 8, 8
+            nn.ReLU(),
+            nn.Flatten(),
+            nn.Linear(64 * 8 * 8, 256),
+            nn.ReLU(),
+            nn.Linear(256, latent_dim * 2) # *2 to represent real and imaginary parts
+        )
+        self.latent_dim = latent_dim
+
+    def forward(self, x):
+        # Generate raw semantic symbols
+        symbols = self.feature_extractor(x)
+        
+        # Power Normalization Constraint: Ensures the transmitter adheres to 
+        # average power constraints E[||x||^2] <= 1
+        symbols = symbols / torch.sqrt(torch.mean(symbols ** 2))
+        return symbols
+
+class WirelessChannel(nn.Module):
+    """
+    Physical Layer Wireless Channel Simulation.
+    Supports dynamic SNR adjustments driven by the MAC layer.
+    """
+    def __init__(self):
+        super(WirelessChannel, self).__init__()
+
+    def forward(self, symbols, snr_db):
+        # Calculate noise variance based on desired SNR
+        # SNR = P_signal / P_noise. Since P_signal is normalized to 1:
+        snr_linear = 10 ** (snr_db / 10.0)
+        noise_std = torch.sqrt(torch.tensor(1.0 / snr_linear))
+        
+        # Generate AWGN matching the symbol shape
+        noise = torch.randn_like(symbols) * noise_std.to(symbols.device)
+        
+        # Received corrupted symbols
+        received_symbols = symbols + noise
+        return received_symbols
+
+class SemanticDecoder(nn.Module):
+    """
+    Semantic PHY Receiver: Maps raw corrupted channel symbols back 
+    into the semantic reconstruction space.
+    """
+    def __init__(self, latent_dim=16):
+        super(SemanticDecoder, self).__init__()
+        self.latent_dim = latent_dim
+        self.reconstructor = nn.Sequential(
+            nn.Linear(latent_dim * 2, 256),
+            nn.ReLU(),
+            nn.Linear(256, 64 * 8 * 8),
+            nn.ReLU(),
+            nn.Unflatten(1, (64, 8, 8)),
+            nn.ConvTranspose2d(64, 32, kernel_size=5, stride=2, padding=2, output_padding=1),
+            nn.ReLU(),
+            nn.ConvTranspose2d(32, 3, kernel_size=5, stride=2, padding=2, output_padding=1),
+            nn.Sigmoid() # Bound output pixels to [0, 1]
+        )
+
+    def forward(self, x):
+        return self.reconstructor(x)
+
+class DeepJSCC_System(nn.Module):
+    """
+    Unified Semantic PHY-MAC Stack Framework
+    """
+    def __init__(self, latent_dim=16):
+        super(DeepJSCC_System, self).__init__()
+        self.encoder = SemanticEncoder(latent_dim)
+        self.channel = WirelessChannel()
+        self.decoder = SemanticDecoder(latent_dim)
+
+    def forward(self, x, snr_db):
+        transmitted_symbols = self.encoder(x)
+        received_symbols = self.channel(transmitted_symbols, snr_db)
+        reconstruction = self.decoder(received_symbols)
+        return reconstruction
+
+# =====================================================================
+# Simulation and Training Loop Execution
+# =====================================================================
+if __name__ == "__main__":
+    # Hyperparameters
+    batch_size = 4
+    latent_symbols = 32  # Number of channel symbols allocated by MAC
+    target_snr_db = 10.0 # Current channel quality state
+    
+    # Initialize the End-to-End Stack
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    semantic_stack = DeepJSCC_System(latent_dim=latent_symbols).to(device)
+    
+    # Loss objective is defined by semantic fidelity rather than simple bits
+    criterion = nn.MSELoss() 
+    optimizer = optim.Adam(semantic_stack.parameters(), lr=1e-3)
+    
+    # Dummy Batch representing an incoming video stream or sensor frame (32x32 pixels)
+    mock_input_data = torch.rand(batch_size, 3, 32, 32).to(device)
+    
+    print(f"--- Starting Semantic PHY/MAC Pipeline Simulation ---")
+    print(f"Input Data Shape: {mock_input_data.shape}")
+    
+    # Forward Pass through the semantic stack
+    output_data = semantic_stack(mock_input_data, snr_db=target_snr_db)
+    
+    loss = criterion(output_data, mock_input_data)
+    print(f"Initial Semantic Reconstruction Loss (MSE): {loss.item():.4f}")
+    
+    # Gradient Descent updating encoder/decoder jointly
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
+    print("Optimization step completed successfully. Models adjusted for wireless impairments.")
+
+```
+
+**Also some Code with Rayleigh Fading & Phase Distortion (RayleighFadingChannel) in PyTorch**
+
+```python
+
+import torch
+import torch.nn as nn
+import torch.optim as optim
+
+class SemanticEncoder(nn.Module):
+    """
+    Semantic PHY Transmitter: Maps source data to normalized complex-valued 
+    channel symbols (represented as interleaved Real and Imaginary pairs).
+    """
+    def __init__(self, latent_dim=16):
+        super(SemanticEncoder, self).__init__()
+        self.latent_dim = latent_dim
+        self.feature_extractor = nn.Sequential(
+            nn.Conv2d(3, 32, kernel_size=5, stride=2, padding=2),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, kernel_size=5, stride=2, padding=2),
+            nn.ReLU(),
+            nn.Flatten(),
+            nn.Linear(64 * 8 * 8, 256),
+            nn.ReLU(),
+            nn.Linear(256, latent_dim * 2) # Latent dim * 2 (Real, Imaginary components)
+        )
+
+    def forward(self, x):
+        symbols = self.feature_extractor(x)
+        # Reshape to [Batch, Latent_Dim, 2] where dim=2 holds (Real, Imag)
+        symbols = symbols.view(-1, self.latent_dim, 2)
+        
+        # Power Normalization Constraint: E[||x||^2] <= 1 across complex space
+        power = torch.sqrt(torch.mean(symbols ** 2))
+        symbols = symbols / power
+        return symbols
+
+class RayleighFadingChannel(nn.Module):
+    """
+    Simulates a flat Rayleigh fading channel with phase distortion and AWGN.
+    Y = H * X + N, where H is a complex Gaussian variable.
+    """
+    def __init__(self):
+        super(RayleighFadingChannel, self).__init__()
+
+    def forward(self, symbols, snr_db):
+        batch_size, latent_dim, _ = symbols.shape
+        device = symbols.device
+
+        # 1. Generate Rayleigh Fading Coefficients (H = H_real + j*H_imag)
+        # Independent zero-mean Gaussian variables with variance = 0.5 per dimension
+        h_real = torch.randn(batch_size, latent_dim, 1, device=device) * 0.707
+        h_imag = torch.randn(batch_size, latent_dim, 1, device=device) * 0.707
+        
+        x_real = symbols[:, :, 0:1]
+        x_imag = symbols[:, :, 1:2]
+
+        # 2. Apply Complex Multiplication (H * X) to simulate fading and phase rotation
+        # (a + jb)(c + jd) = (ac - bd) + j(bc + ad)
+        faded_real = (h_real * x_real) - (h_imag * x_imag)
+        faded_imag = (h_imag * x_real) + (h_real * x_imag)
+        faded_symbols = torch.cat([faded_real, faded_imag], dim=2)
+
+        # 3. Additive White Gaussian Noise (AWGN)
+        snr_linear = 10 ** (snr_db / 10.0)
+        # Variance of noise per complex dimension
+        noise_std = torch.sqrt(torch.tensor(1.0 / (2.0 * snr_linear), device=device))
+        noise = torch.randn_like(faded_symbols) * noise_std
+
+        received_symbols = faded_symbols + noise
+        
+        # Concatenate H components to pass perfect Channel State Information (CSI) to receiver
+        h_complex = torch.cat([h_real, h_imag], dim=2)
+        
+        return received_symbols, h_complex
+
+class SemanticDecoder(nn.Module):
+    """
+    Semantic PHY Receiver: Performs Zero-Forcing (ZF) Equalization using CSI,
+    then translates the equalized symbols back into source data.
+    """
+    def __init__(self, latent_dim=16):
+        super(SemanticDecoder, self).__init__()
+        self.latent_dim = latent_dim
+        
+        self.reconstructor = nn.Sequential(
+            nn.Linear(latent_dim * 2, 256),
+            nn.ReLU(),
+            nn.Linear(256, 64 * 8 * 8),
+            nn.ReLU(),
+            nn.Unflatten(1, (64, 8, 8)),
+            nn.ConvTranspose2d(64, 32, kernel_size=5, stride=2, padding=2, output_padding=1),
+            nn.ReLU(),
+            nn.ConvTranspose2d(32, 3, kernel_size=5, stride=2, padding=2, output_padding=1),
+            nn.Sigmoid()
+        )
+
+    def forward(self, y, h):
+        # Perform Zero-Forcing Equalization: X_hat = Y / H
+        # Complex division: (y_r + j*y_i) / (h_r + j*h_i)
+        y_r, y_i = y[:, :, 0:1], y[:, :, 1:2]
+        h_r, h_i = h[:, :, 0:1], h[:, :, 1:2]
+        
+        denom = h_r**2 + h_i**2 + 1e-6 # Added epsilon to prevent division by zero
+        
+        eq_real = (y_r * h_r + y_i * h_i) / denom
+        eq_imag = (y_i * h_r - y_r * h_i) / denom
+        
+        equalized_symbols = torch.cat([eq_real, eq_imag], dim=2)
+        
+        # Flatten the symbols for the neural network layers
+        flattenED_symbols = equalized_symbols.view(-1, self.latent_dim * 2)
+        return self.reconstructor(flattenED_symbols)
+
+class DeepJSCC_Rayleigh_System(nn.Module):
+    def __init__(self, latent_dim=16):
+        super(DeepJSCC_Rayleigh_System, self).__init__()
+        self.encoder = SemanticEncoder(latent_dim)
+        self.channel = RayleighFadingChannel()
+        self.decoder = SemanticDecoder(latent_dim)
+
+    def forward(self, x, snr_db):
+        tx_symbols = self.encoder(x)
+        rx_symbols, csi = self.channel(tx_symbols, snr_db)
+        reconstruction = self.decoder(rx_symbols, csi)
+        return reconstruction
+
+# =====================================================================
+# Simulation Pipeline Execution
+# =====================================================================
+if __name__ == "__main__":
+    batch_size = 4
+    latent_symbols = 32  
+    target_snr_db = 15.0 # Higher SNR typically required to combat fading deep nulls
+    
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    semantic_stack = DeepJSCC_Rayleigh_System(latent_dim=latent_symbols).to(device)
+    
+    criterion = nn.MSELoss()
+    optimizer = optim.Adam(semantic_stack.parameters(), lr=1e-3)
+    
+    # Generate mock tensor data
+    mock_input_data = torch.rand(batch_size, 3, 32, 32).to(device)
+    
+    print("--- Starting Semantic Rayleigh Pipeline Simulation ---")
+    
+    # Execute end-to-end forward step
+    output_data = semantic_stack(mock_input_data, snr_db=target_snr_db)
+    
+    loss = criterion(output_data, mock_input_data)
+    print(f"Reconstruction Loss under Rayleigh Fading: {loss.item():.4f}")
+    
+    # Backpropagation to allow model to adapt to equalization residuals
+    loss.backward()
+    optimizer.step()
+    print("Pipeline successfully handled fading, phase distortion, and backprop adjustments.")
+
+```
+
 **Semantic MAC Scheduler view**
 
 ```
