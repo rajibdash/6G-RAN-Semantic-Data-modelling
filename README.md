@@ -21,7 +21,7 @@ Networks (RAN), including semantic-aware MAC scheduling.
 ```
 
 This is an initial organization of the existing material. Design notes and
-embedded PyTorch blueprints remain together in the design document; they are
+embedded PyTorch blueprints remain together in the design document and they are
 draft examples, not a packaged implementation.
 
 ## Design documentation
