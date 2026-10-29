@@ -37,6 +37,7 @@ draft examples, not a packaged implementation.
 - [arXiv 2407.11161v2](references/papers/2407.11161v2.pdf)
 - [arXiv 2512.20917v1](references/papers/2512.20917v1.pdf)
 - [6G and ORAN Semantic Survey](references/papers/6G%20and%20ORAN%20Semantic%20Survey.pdf)
+- [A new horizon: PVA SDK](https://docs.nvidia.com/pva/solutions/0.6.0/index.html)
 
 ## Adding material
 
