@@ -3,19 +3,53 @@
 ## 6G RAN Semantic Data modelling (__*Work In Progress*__)
 
 * RAN Semantic Data in 6G shifts the paradigm of wireless transmission from shannonian bit-level delivery to the delivery of the meaning and intent of data.
-* By transmitting only the essential semantic attributes required to reconstruct meaning at the receiver, 6G Radio Access Networks (RAN) can reduce bandwidth consumption, ultra-low latency, and intelligent edge reasoning.
+* By transmitting only the task-relevant information needed by the receiver, 6G Radio Access Networks (RAN) may reduce transmitted data volume or latency and support edge reasoning when the application, channel, and endpoint models make semantic processing beneficial.
 * Next-generation wireless networks, including 5G-Advanced and 6G, will connect with large numbers of bandwidth-constrained devices such as vehicles, surveillance cameras, and drones. Transmitting raw or conventionally compressed images can use valuable spectrum on details irrelevant to a particular task. Semantic communication instead aims to transmit task-relevant information—such as detected objects and their locations—while preserving what is needed for downstream decisions.
 * ?__Semantic communication is fundamentally a rate-allocation problem__: a limited transmission budget is split between describing task-relevant content and protecting it against the channel. The practical bottleneck is often not compression efficiency alone but model interoperability, because the neural encoder on the device and the neural decoder in the network must behave as a compatible pair. Shared codebooks, semantic equalization, and a classical fallback mode all start to look less like isolated codec tricks and more like the same two-sided AI management problem that 3GPP already faces in areas such as AI-assisted channel-state feedback.
 * ? Placement decides where the inference can run. Accelerator contention decides how many semantic sessions the RAN can sustain. relation between semantic session and UE session, does UE session know about every semantic data and semantic session? how memory footprint will be impacted with AI/ML Ops for semantic data transmission and/or reception, OTA impact as well? whether Semantic Communication turns RAN Scheduling into a Radio Compute Problem?
 * A Semantic Aware Radio Access Network (S-RAN) uses AI and ML Ops to compress data into a latent representation (a "semantic data layer").
 * How it works?: For example instead of sending an entire high resolution(HD) image over a crowded cellular/Radio link, a semantic encoder strips away redundant data and extracts only the essential features needed for the receiving end to understand or reconstruct the message.
-* Why it matters?: It dramatically increases spectrum efficiency and reduces latency. The RAN schedules and weights radio resources based on the importance and semantic value of the data rather than treating every bit identically.
-* Benefits?:
+* Why it matters?: It can improve spectrum efficiency or task performance in suitable scenarios. The RAN may account for task value alongside conventional channel, QoS, and fairness constraints rather than treating all traffic identically.
+* Potential benefits, which require task- and system-level validation, include lower transmitted data volume, better task quality under a constrained link, and more efficient allocation of radio or edge-compute resources.
 
 ### Background
 * Need to understand how to model and integrate a **Semantic Layer** and a **Knowledge Plane** parallel to the data and control planes for 6G.
 **Why a need of Semantic layer and data for 6G, and how AI could play in that modelling? Also, the lifecycle of Semantic Models in the RAN.**
 * Semantic aware MAC Scheduler: how MAC Scheduler will be semantic aware and what features and controls are needed for that, full design with signaling, benefits in terms user and RAN perspective. 
+
+### Literature review: gaps and design implications
+
+The three semantic-communication PDFs in `references/papers/` provide complementary perspectives: S-RAN architecture and multi-user resource management [7], a broader Semantic RAN survey across radio, data-link, network, and security functions [9], and semantic protocols, protocol learning, and AI-enabled protocols in O-RAN/6G [8]. Together they identify several areas that this draft introduces but does not yet specify.
+
+| Gap in this draft | What the papers highlight | Design implication |
+|---|---|---|
+| Encoder/decoder and knowledge-base compatibility | Semantic quality depends on the matched capabilities of both endpoints, their channel conditions, and aligned background knowledge. Knowledge bases may be service-specific, local, or personalized [7], [9]. | Identify the task, model/profile version, and relevant knowledge context before enabling semantic transmission; detect mismatch and provide a conventional or hybrid fallback. |
+| Semantic service and UE-session relationship | The papers describe terminal-to-terminal, cross-RAN, and terminal-to-server scenarios, which may coexist with ordinary traffic [7]. | Treat a semantic session as application/task context associated with existing UE connectivity and QoS flows, not as a new UE session for each semantic object. The exact mapping and signaling remain an open design item. |
+| Hybrid operation and mode selection | Semantic and conventional bit-oriented communication will coexist; the communication mode depends on service needs, knowledge/model availability, and RAN resources [7], [9]. | Add admission and mode selection, and retain a bit-oriented path when semantic processing is unavailable, unsuitable, or not worth its cost. |
+| Compute and model lifecycle | Edge inference, model memory/compute demand, deployment, and model interoperability are practical constraints, not just radio concerns [8], [9]. | Track compute capacity and model residency alongside radio state; define model/profile onboarding, version alignment, update, rollback, and retirement. |
+| Task-aware scheduling objective | Radio allocation must account for semantic utility, channel conditions, knowledge matching, and competition with conventional users; suitable semantic metrics remain an open research problem [7], [9]. | Define a measurable application utility and optimize it subject to radio, compute, latency, reliability, and fairness constraints. Do not equate semantic priority with an unconditional grant or retransmission. |
+| Evaluation and standardization | Semantic KPIs, reproducible system-level evaluation, interoperability, and standardization are still developing [8], [9]. | Report task-level quality together with conventional QoS, radio/compute cost, fairness, and interoperability results. Treat proposed interfaces and metrics in this document as conceptual unless a standard specifies them. |
+| Security and privacy | Semantic context, knowledge bases, model updates, and learned protocols add privacy and integrity risks [8], [9]. | Include authorization, data minimization, model/update integrity, and privacy review in the design and evaluation. |
+
+#### Semantic service context and model alignment
+
+A semantic session is an application-scoped context for a task or stream. It may be carried over an existing UE/PDU session and one or more QoS flows; multiple semantic tasks can share a UE session, and a task may use conventional communication instead. This is a proposed modeling convention, not a standardized 3GPP session type.
+
+Before using a semantic profile, the communicating endpoints should agree on the task and compatible encoder/decoder profile, model version, and any required knowledge-base or context version. A conceptual service context can include a task/profile identifier, direction, requested task quality, deadline or freshness limit, and fallback policy. Avoid exposing payload meaning to the MAC through deep packet inspection; pass only authorized, validated metadata through an explicit interface. The metadata format and signaling procedure are not standardized by the cited papers.
+
+The model and knowledge lifecycle should cover onboarding and compatibility checks, version distribution, runtime monitoring, controlled update/rollback, and retirement. Model placement may be at the device, RAN edge, or service/task server according to latency, compute, memory, energy, and privacy constraints. A model that is not resident or whose knowledge context is incompatible must not be assumed available to the scheduler.
+
+#### Hybrid operation and semantic-aware scheduling
+
+The scheduler should retain conventional QoS, channel, buffer, and reliability handling. A semantic-aware policy can rank eligible transmission actions by expected marginal task-utility improvement, then allocate resources subject to radio, latency, compute, energy, and fairness budgets. A conceptual objective is to maximize aggregate expected task utility; the utility function and constraints must be defined and measured for each service rather than assumed to be universal.
+
+Candidate actions may include semantic encoding/profile selection, transmission size, radio resources, or conventional fallback. The policy must account for model/knowledge match, channel state, task age or deadline, and inference queue/cost. Heavy semantic inference and model adaptation belong outside the slot-critical scheduler unless their worst-case latency and compute budget are demonstrated. HARQ, DTX, carrier aggregation, and other MAC/PHY procedures remain subject to the applicable radio protocol; semantic value may inform eligible choices but must not silently override protocol-required behavior or service reliability.
+
+#### Evaluation and security requirements
+
+Evaluate semantic operation against a conventional bit-oriented baseline and a hybrid baseline under comparable service requirements. Report task-specific quality (for example, task accuracy or semantic similarity/distortion) alongside end-to-end latency, reliability, goodput, spectrum and energy efficiency, fairness, control overhead, inference latency, compute utilization, and model/knowledge mismatch. Test different channels, loads, user counts, mobility, and compute contention; do not present gains from an individual simulation or survey as guaranteed system-wide improvements. There is not yet a single standardized semantic KPI that covers all tasks [8], [9].
+
+Semantic metadata, task intent, personalized knowledge, and model updates can reveal sensitive information or be manipulated. Apply least-privilege access, data minimization, integrity and provenance checks for model/profile updates, and privacy review for any stored or shared context. Include interoperability and failure/fallback behavior in test plans, not only semantic reconstruction quality.
 
 ### Architecture and stack (High level)
 
@@ -51,6 +85,8 @@
        |  +---------------------------------------------------+  |
        +---------------------------------------------------------+
 ```
+The diagram is a conceptual target architecture, not a description of standardized 3GPP functions or interfaces. In particular, **Semantic UPF**, **N3S**, and the placement of semantic PDCP/SDAP are proposals in this draft, not interfaces or network functions defined by the cited PDFs. Preserve the existing RAN/core protocol path as the baseline and introduce semantic metadata or processing only through an agreed, authorized extension. O-RAN components such as SMO and RIC may support model/policy lifecycle functions where the deployment and timing allow; they are not prerequisites for every semantic service [8], [9].
+
 ## Semantic-aware MAC Scheduler design details
 ### Functional Architecture & Design
 
@@ -89,6 +125,8 @@ The block diagram below details the architecture, component boundaries, and inte
 * **Semantic Decoder (Receiver)**
   * It takes the corrupted channel symbols (y) and reconstructs the data.
   * Instead of minimizing bit-error rate (BER), it optimizes semantic similarity (e.g., MS-SSIM for images, BLEU for text, or classification accuracy for edge AI).
+
+The direct-to-symbol path above is one Deep-JSCC-style research option, not a requirement for every semantic system and not a claim that deployed RANs should bypass standard channel coding or modulation. Semantic coding may also operate with conventional bit-level PHY/MAC mechanisms. The example channel models and CSI assumptions below are simulation choices; they do not represent full multi-user, end-to-end RAN channel behavior. Semantic metrics must be selected for the task and reported with radio reliability and resource costs [7], [9].
 
 **Draft code(PyTorch blueprint with Deep JSCC (Joint Source-Channel Coding) Semantic PHY layer designed...)**
 
@@ -441,7 +479,7 @@ if __name__ == "__main__":
 ##### [1] Semantic Extraction & Parsing Engine
 * **Purpose:** Inspects incoming data boundaries at the sub-millisecond level to determine the contextual priority of a packet.
 * **Key Mechanisms:**
-  * **Header Inspection:** Decodes deep encapsulation or explicit metadata marks passed from the Service Data Adaptation Protocol (SDAP) or user-plane transport network layers.
+  * **Header Inspection:** The original proposal considers deep encapsulation or explicit metadata marks passed from SDAP or user-plane transport layers. For an implementable design, prefer explicit, authorized metadata; do not assume deep payload inspection or a new header extension is standardized.
   * **Feature Mapping:** Classifies raw bytes into distinct structural states (e.g., control loop state transitions, high-impact changes in automated driving safety margins, or invariant background information).
 
 ##### [2] Semantic Information Valuation Module (SIVM)
@@ -460,12 +498,14 @@ if __name__ == "__main__":
 * **Purpose:** Directs hardware mapping loops and enforces closed-loop target state corrections.
 * **Key Mechanisms:**
   * **HARQ Interaction:** Intercepts Hybrid Automatic Repeat Request (HARQ) ACK/NACK signaling from the Physical Layer.
-  * **Priority Adjustment:** If a semantically critical block triggers a NACK, this component overrides baseline metrics, boosting the packet's allocation factor in the immediately following Transmission Time Interval (TTI).
+  * **Priority Adjustment:** The original proposal boosts allocation for a semantically critical block after a NACK. Treat this as a research policy to evaluate, not an unconditional override: retransmission and reliability behavior must remain within the applicable HARQ procedure and service contract.
 
 ## Semantic-Aware MAC Scheduler with HARQ, DTX, and Carrier Aggregation Constraints 
 
 ### System Architecture & Block Diagram
 The Semantic-Aware MAC Scheduler inside the gNB Distributed Unit (gNB-DU) shifts the resource block allocation paradigm from classic raw-throughput optimization to the optimization of **Quality of Information (QoI)** and **Value of Information (VoI)**. This architectural extension explicitly models **16-process HARQ management**, **DTX (Discontinuous Transmission) recovery loops**, and **Carrier Aggregation (CA)** across multiple Component Carriers (CCs).
+
+The fixed 16-process count and the proposed DTX recovery behavior in this illustration are not universal semantic-RAN requirements; supported HARQ processes and DTX behavior depend on the radio configuration and implementation. In particular, “blind retransmission” or power adjustment must not be treated as a generic DTX response. Keep CA and HARQ operation compliant with the applicable PHY/MAC procedures, and evaluate any semantic-aware retransmission policy against reliability, latency, and resource constraints.
 
 ```
 +-----------------------------------------------------------------------+
@@ -521,5 +561,6 @@ The Semantic-Aware MAC Scheduler inside the gNB Distributed Unit (gNB-DU) shifts
 4. Santhi, N. N., et al. (2026). ARCHES: Adaptive Real-Time Switching of AI Models for the RAN. arXiv:2604.23397. https://arxiv.org/abs/2604.23397
 5. NVIDIA Technical Blog. Deploy AI-RAN at Cell Sites with NVIDIA ARC-Compact. https://developer.nvidia.com/blog/deploy-ai-ran-at-cell-sites-with-nvidia-arc-compact/
 6. Task-Oriented Communication with Hybrid-Precision Models. arXiv:2607.16766. https://arxiv.org/abs/2607.16766
-7. https://arxiv.org/html/2407.11161v2
-8. https://www.sciencedirect.com/science/article/pii/S1389128626001556
+7. Sun, Y., et al. (2024). *S-RAN: Semantic-Aware Radio Access Networks*. arXiv:2407.11161v2. https://arxiv.org/abs/2407.11161
+8. Tahenni, A., et al. (2026). *A Survey on 6G and O-RAN Intelligence: Semantic Protocols, Protocol Learning, and AI-Enabled Semantic Protocols*. Computer Networks, 279, 112143. https://www.sciencedirect.com/science/article/pii/S1389128626001556 (https://doi.org/10.1016/j.comnet.2026.112143)
+9. Meng, R., et al. (2025). *Semantic Radio Access Networks: Architecture, State-of-the-Art, and Future Directions*. arXiv:2512.20917v1. https://arxiv.org/abs/2512.20917
