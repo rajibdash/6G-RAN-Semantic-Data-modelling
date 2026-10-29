@@ -80,6 +80,9 @@ The block diagram below details the architecture, component boundaries, and inte
 ```
 * **Semantic Encoder (Transmitter)**
   * Maps raw data (e.g., an image, text tokens, or telemetry vector) directly to complex valued channel symbols (\(x \in \mathbb{C}\)), completely bypassing digital modulation schemes like QAM.
+ 
+* **Channel Layer**
+  * which simulates real world physical impairments: Additive White Gaussian Noise (AWGN), Rayleigh fading, and phase shifts.
 
 * **Semantic Decoder (Receiver)**
   * It takes the corrupted channel symbols (y) and reconstructs the data.
